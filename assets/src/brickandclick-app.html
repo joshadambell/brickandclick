@@ -1,0 +1,303 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-header/app-header.html">
+<link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
+<link rel="import" href="../bower_components/app-layout/app-scroll-effects/effects/waterfall.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/iron-image/iron-image.html">
+<link rel="import" href="../bower_components/iron-scroll-threshold/iron-scroll-threshold.html">
+<link rel="import" href="../bower_components/paper-spinner/paper-spinner.html">
+<link rel="import" href="../bower_components/iron-list/iron-list.html">
+<link rel="import" href="../bower_components/iron-media-query/iron-media-query.html">
+
+<dom-module id="brickandclick-app">
+    <template>
+        <style>
+            :host {
+                display: block;
+                @apply --paper-font-common-base;
+            }
+
+            app-header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1;
+                background-color: rgba(255, 255, 255, 0.95);
+                --app-header-shadow: {
+                    box-shadow: inset 0px 5px 6px -3px rgba(0, 0, 0, 0.2);
+                    height: 10px;
+                    bottom: -10px;
+                };
+            }
+
+            app-header:not([shadow]) {
+                border-bottom: 1px solid #ddd;
+            }
+
+            iron-list {
+                margin-top: 400px;
+                padding-bottom: 16px;
+            }
+
+            .photoContent {
+                @apply --layout;
+                background-color: #ddd;
+                position: relative;
+                width: 300px;
+                height: 300px;
+                margin: 8px;
+            }
+
+            .photoContent:hover .detail {
+                opacity: 1;
+            }
+
+            .photoContent>iron-image {
+                @apply --layout-flex;
+            }
+
+            .photoContent>.detail {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.8) 100%);
+                color: white;
+                font-size: 20px;
+                font-weight: 100;
+                padding: 20px;
+                opacity: 0;
+                transition: opacity 0.1s;
+            }
+
+            .searchInput {
+                @apply --layout-flex;
+                font-size: 18px;
+                padding: 10px 20px;
+                border: none;
+                color: #454749;
+                -webkit-appearance: none;
+                border-radius: 0px;
+                background: #f6f6f6;
+            }
+
+            .searchInput:hover {
+                /* background-color: rgba(255, 255, 255, 0.3); */
+            }
+
+            .searchInput:focus {
+                /* background-color: white; */
+                outline: none;
+                /* color: black; */
+                /* background: #f6f6f6; */
+            }
+
+            .loadingIndicator {
+                font-size: 16px;
+                text-align: center;
+                height: 60px;
+            }
+
+            .loadingIndicator paper-spinner {
+                margin-right: 20px;
+                vertical-align: middle;
+            }
+
+            @media (max-width: 800px) {
+                .photoContainer {
+                    width: calc(50% - 16px);
+                }
+
+                .photoContent {
+                    width: auto;
+                }
+            }
+
+            @media (max-width: 400px) {
+                iron-list {
+                    margin-top: 72px;
+                }
+
+                .photoContainer {
+                    width: 100%;
+                }
+
+                .photoContent>.detail {
+                    opacity: 1;
+                }
+            }
+
+            ::-webkit-input-placeholder {
+                color:  #454749;
+            }
+
+            ::-moz-placeholder {
+                color: rgba(255, 255, 255, 0.5);
+            }
+
+            :-ms-input-placeholder {
+                color: rgba(255, 255, 255, 0.5);
+            }
+
+            ::-ms-input-placeholder {
+                color: rgba(255, 255, 255, 0.5);
+            }
+
+            .spacer {
+                @apply --layout;
+                @apply --layout-flex-auto;
+                @apply --layout-center-center;
+            }
+
+            #mainToolbar {
+                height: 300px;
+            }
+
+            #searchToolbar{
+                /* background-color: #4285f4; */
+                /* color: white; */
+            }
+
+            .logo {
+                /* width: 220px; */
+                height: 40px;
+                background-size: 100% 100%;
+            }
+        </style>
+
+        <iron-media-query query="max-width: 400px" query-matches="{{smallScreen}}"></iron-media-query>
+        <iron-ajax id="ajax" loading="{{loadingPhotos}}" url="[[_getAPIEndpoint(apiKey, searchText, page)]]" handle-as="text" on-response="_didReceiveResponse"></iron-ajax>
+
+        <!-- main header -->
+        <app-header fixed slot="header" effects="waterfall"  condenses="[[!smallScreen]]" reveals="[[!smallScreen]]">
+            
+            <app-toolbar id="mainToolbar">
+                <div class="navItem leftItem">
+                    <paper-icon-button icon="menu" drawer-toggle alt="Toogle navigation menu"></paper-icon-button>
+                    <a href="#[[sectionData.section]]" tabindex="-1">
+                        <paper-icon-button icon="arrow-back" alt="Back to the home"></paper-icon-button>
+                    </a>
+                </div>
+                <div class="spacer">
+                    <img src="" class="logo" alt="Brick And Click">
+                </div>
+            </app-toolbar>
+            
+            <app-toolbar id="searchToolbar">
+                <input class="searchInput" type="search" placeholder="Search..." value="{{searchText::input}}">
+            </app-toolbar>
+
+        </app-header>
+
+        <iron-list items="[[photos]]" as="photo" scroll-target="document" grid>
+            <template>
+                <div class="photoContainer">
+                    <div class="photoContent" tabindex$="[[tabIndex]]">
+                        <iron-image sizing="cover" src="[[photo.LargeImage]]">
+                        </iron-image>
+                        <div class="detail">[[photo.Name]]</div>
+                    </div>
+                </div>
+            </template>
+        </iron-list>
+
+        <div class="loadingIndicator" hidden$="[[!loadingPhotos]]">
+            <paper-spinner active$="[[loadingPhotos]]"></paper-spinner> Fetching photos for
+            <b>[[searchText]]</b>
+        </div>
+
+        <!-- this element loads more photos when the user scrolls down and reached the lower threshold -->
+        <iron-scroll-threshold id="scrollTheshold" lower-threshold="500" on-lower-threshold="_onLowerThreshold" scroll-target="document">
+        </iron-scroll-threshold>
+    </template>
+
+    <script>
+        class BrickndclickApp extends Polymer.LegacyElementMixin(Polymer.Element) {
+            static get is() { return "brickandclick-app" }
+
+            static get properties() {
+                return {
+                    apiKey: {
+                        type: String,
+                        value: 'u63audhfqxgm76swmmdwvy98'
+                    },
+
+                    photos: {
+                        type: Array,
+                        value: function () {
+                            return [];
+                        }
+                    },
+
+                    perPage: {
+                        type: Number,
+                        value: 10
+                    },
+
+                    page: {
+                        type: Number,
+                        value: 0,
+                    },
+
+                    searchText: {
+                        type: String,
+                        value: 'ipod'
+                    },
+
+                    loadingPhotos: Boolean
+                }
+            }
+
+            static get observers() {
+                return [
+                    '_resetPhotos(searchText)'
+                ]
+            }
+
+            _getAPIEndpoint(apiKey, searchText, page) {
+                return 'http://localhost:8081/search/' + searchText + 
+                    '?start=' + page
+            }
+
+            _didReceiveResponse(e) {
+                var payload = JSON.parse(e.detail.response);
+
+                if (!payload) {
+                    return;
+                }
+
+                payload.Items.forEach(function (photo) {
+                    this.push('photos', photo);
+                }, this);
+
+                this.$.scrollTheshold.clearTriggers();
+            }
+
+            _onLowerThreshold() {
+                this.debounce('_loadPhotos', this._loadMorePhotos, 60);
+            }
+
+            _loadMorePhotos() {
+                if (this.$.ajax.lastRequest) {
+                    this.$.ajax.lastRequest.abort();
+                }
+                this.page += this.photos.length;
+                this.$.ajax.generateRequest();
+            }
+
+            _resetPhotos(searchText) {
+                this.page = 1;
+                this.photos = [];
+
+                if (searchText.trim() !== '') {
+                    this.debounce('_loadPhotos', this._loadMorePhotos, 400);
+                }
+            }
+        }
+
+        customElements.define(BrickndclickApp.is, BrickndclickApp)
+    </script>
+</dom-module>
